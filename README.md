@@ -60,7 +60,7 @@ const tabletLandscapeRange = remedia({
 });
 ```
 
-### 5. OR multiple queries together
+### 5. "OR" multiple queries together
 
 If you need to **OR** multiple queries together, just pass multiple queries into remedia.
 
