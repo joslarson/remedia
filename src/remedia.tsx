@@ -4,7 +4,7 @@ import { json2mq } from './json2mq';
 import { QueryObject } from './types';
 
 export * from './types';
-Array;
+
 // @ts-ignore
 export interface MediaQuery<Q extends QueryObject> extends Q {}
 
