@@ -4,7 +4,9 @@ A remedy for media queries in React.
 
 Remedia provides an API for Media Queries that treats JavaScript and React as a first class citizens with CSS. Rather than being defined as strings, Media Queries are defined as `MediaQuery` objects that can later be combined to make new Media Queries or who's values can be referenced in other contexts.
 
-Remedia leverages advanced TypeScript features to provide not only a type safe API, but a uniquely great developer experience whether you're using TypeScript or not.
+Remedia is written in TypeScript providing a type safe API and a great developer experience. It makes use of generics and literal types to make it easy to inspect a query's underlying data just by looking at its type information:
+
+![type information](./docs/type-information.png)
 
 ## Installation
 
