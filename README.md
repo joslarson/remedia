@@ -22,7 +22,7 @@ import remedia from 'remedia';
 const phoneLargeMin = remedia({ minWidth: 321 });
 ```
 
-2. Use a `MediaQuery` in CSS
+### 2. Use a `MediaQuery` in CSS
 
 ```ts
 const style = css`
