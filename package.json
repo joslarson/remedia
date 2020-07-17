@@ -8,7 +8,7 @@
   ],
   "author": "Joseph Larson",
   "module": "dist/remedia.esm.js",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "homepage": "https://github.com/joslarson/remedia",
   "bugs": "https://github.com/joslarson/remedia/issues",
   "license": "MIT",
