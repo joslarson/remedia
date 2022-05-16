@@ -1,6 +1,6 @@
-import { QueryObject } from './types';
-
 // credit: forked from https://github.com/akiran/json2mq
+
+import { QueryObject } from './types';
 
 const camel2hyphen = (str: string) =>
   str
@@ -16,11 +16,14 @@ const isDimension = function(feature: string) {
 
 const obj2mq = function(obj: QueryObject) {
   let mq = '';
-  //  @ts-ignore
   const features: string[] = Object.keys(obj);
   features.forEach(function(f, i) {
     let value: number | string | boolean | Function | undefined = obj[f];
-    if (typeof value === 'function' || f.startsWith('_')) {
+    if (
+      value === undefined ||
+      typeof value === 'function' ||
+      f.startsWith('_')
+    ) {
       return;
     }
     const feature = camel2hyphen(f);
