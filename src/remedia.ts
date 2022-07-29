@@ -3,8 +3,6 @@ import * as React from 'react';
 import { json2mq } from './json2mq';
 import { QueryObject } from './types';
 
-export * from './types';
-
 // @ts-ignore
 export interface MediaQuery<Q extends QueryObject> extends Q {}
 
@@ -22,8 +20,20 @@ export class MediaQuery<Q extends QueryObject = QueryObject> {
     return this._queryString;
   }
 
+  subscribe(listener: (ev: MediaQueryListEvent) => void) {
+    return subscribeToMediaQuery(this, listener);
+  }
+
+  unsubscribe(listener: (ev: MediaQueryListEvent) => void) {
+    return unsubscribeFromMediaQuery(this, listener);
+  }
+
   use(initialState: boolean = false): boolean {
     return useMediaQuery(this, initialState);
+  }
+
+  get(): boolean {
+    return getDoesMediaQueryMatch(this);
   }
 
   /**
@@ -67,8 +77,20 @@ export class CompoundMediaQuery<Q extends QueryObject[] = QueryObject[]> {
     return this._queryString;
   }
 
+  subscribe(listener: (ev: MediaQueryListEvent) => void): () => void {
+    return subscribeToMediaQuery(this, listener);
+  }
+
+  unsubscribe(listener: (ev: MediaQueryListEvent) => void): void {
+    return unsubscribeFromMediaQuery(this, listener);
+  }
+
   use(initialState: boolean = false): boolean {
     return useMediaQuery(this, initialState);
+  }
+
+  get(): boolean {
+    return getDoesMediaQueryMatch(this);
   }
 
   /**
@@ -80,51 +102,83 @@ export class CompoundMediaQuery<Q extends QueryObject[] = QueryObject[]> {
   }
 }
 
-function useMediaQuery<Q extends CompoundMediaQuery>(
-  query: Q,
-  initialState?: boolean
-): boolean;
-function useMediaQuery<Q extends MediaQuery>(
-  query: Q,
-  initialState?: boolean
-): boolean;
-function useMediaQuery<Q extends QueryObject>(
-  query: Readonly<Q>,
-  initialState?: boolean
-): boolean;
-function useMediaQuery(
-  query: QueryObject | MediaQuery | CompoundMediaQuery,
-  initialState = false
-) {
-  const [matches, setMatches] = React.useState(initialState);
+export const queryListCache: { [key: string]: MediaQueryList } = {};
+
+const getOrCreateMediaQueryList = (
+  query: QueryObject | MediaQuery | CompoundMediaQuery
+) => {
   const mediaQueryString =
     query instanceof MediaQuery || query instanceof CompoundMediaQuery
       ? query.toString()
       : remedia(query).toString();
 
-  React.useEffect(() => {
-    let isMounted = true;
-    const mediaQueryList = window.matchMedia(mediaQueryString);
-    const queryListener = () => {
-      if (!isMounted) {
-        return;
-      }
-      setMatches(mediaQueryList.matches);
-    };
-    mediaQueryList.addListener(queryListener);
+  if (!queryListCache[mediaQueryString]) {
+    queryListCache[mediaQueryString] = window.matchMedia(mediaQueryString);
+  }
 
-    setMatches(mediaQueryList.matches);
+  return queryListCache[mediaQueryString];
+};
+
+function subscribeToMediaQuery(
+  query: QueryObject | MediaQuery | CompoundMediaQuery,
+  listener: (ev: MediaQueryListEvent) => void
+) {
+  const mediaQueryList = getOrCreateMediaQueryList(query);
+
+  if (typeof mediaQueryList.addEventListener === 'function') {
+    mediaQueryList.addEventListener('change', listener);
+    return () => mediaQueryList.removeEventListener('change', listener);
+  } else {
+    mediaQueryList.addListener(listener);
+    return () => mediaQueryList.removeListener(listener);
+  }
+}
+
+function unsubscribeFromMediaQuery(
+  query: QueryObject | MediaQuery | CompoundMediaQuery,
+  listener: (ev: MediaQueryListEvent) => void
+) {
+  const mediaQueryList = getOrCreateMediaQueryList(query);
+
+  if (typeof mediaQueryList.addEventListener === 'function') {
+    mediaQueryList.removeEventListener('change', listener);
+  } else {
+    mediaQueryList.removeListener(listener);
+  }
+}
+
+function useMediaQuery(
+  query: QueryObject | MediaQuery | CompoundMediaQuery,
+  initialState = false
+) {
+  const [matches, setMatches] = React.useState(initialState);
+
+  React.useEffect(() => {
+    setMatches(getDoesMediaQueryMatch(query));
+
+    let isMounted = true;
+    const unsubscribe = subscribeToMediaQuery(query, ev => {
+      if (!isMounted) return;
+      setMatches(ev.matches);
+    });
 
     return () => {
       isMounted = false;
-      mediaQueryList.removeListener(queryListener);
+      unsubscribe();
     };
-  }, [mediaQueryString]);
+  }, []);
 
   return matches;
 }
 
-const cache: { [key: string]: MediaQuery | CompoundMediaQuery } = {};
+function getDoesMediaQueryMatch(
+  query: QueryObject | MediaQuery | CompoundMediaQuery
+) {
+  const mediaQueryList = getOrCreateMediaQueryList(query);
+  return mediaQueryList.matches;
+}
+
+const queryCache: { [key: string]: MediaQuery | CompoundMediaQuery } = {};
 
 // All of these overloads are just to improve autocomplete, otherwise
 // theres no autocomplete for object literals.
@@ -190,11 +244,11 @@ export function remedia<Q extends (QueryObject | MediaQuery)[]>(...query: Q) {
 
   const cacheKey = newQuery.toString();
 
-  if (!cache[cacheKey]) {
-    cache[cacheKey] = newQuery;
+  if (!queryCache[cacheKey]) {
+    queryCache[cacheKey] = newQuery;
   }
 
-  return cache[cacheKey] as Q extends { length: 1 }
+  return queryCache[cacheKey] as Q extends { length: 1 }
     ? Q[0] extends MediaQuery
       ? Q[0]
       : MediaQuery<Q[0]>
