@@ -11,7 +11,7 @@ export interface MediaQuery<Q extends QueryObject> extends Q {}
 export class MediaQuery<Q extends QueryObject = QueryObject> {
   private _queryString: string;
 
-  constructor(query: Readonly<Q>) {
+  constructor({ _queryString, ...query }: Readonly<Q>) {
     // copy query object props to MediaQuery instance
     Object.assign(this, query);
     // set media query string value
@@ -45,7 +45,9 @@ export class CompoundMediaQuery<Q extends QueryObject[] = QueryObject[]> {
   constructor(...query: Q) {
     query.forEach((q, i) => (this[i] = q));
     this.length = query.length;
-    this._queryString = json2mq(query);
+    this._queryString = json2mq(
+      query.map(({ _queryString, ...queryPart }) => queryPart)
+    );
   }
 
   [Symbol.iterator](): Iterator<Q[number]> {
